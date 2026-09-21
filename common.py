@@ -15,9 +15,23 @@ from PIL import Image
 # KONFIGURASI
 # ============================================================
 
-# >>> VERIFIKASI: path model final (bukan checkpoint Eksperimen 4 yang
-# dicurigai data leakage, kecuali sudah dikonfirmasi aman).
-MODEL_PATH = "model/best_model_phase2.keras"
+# >>> WAJIB DIISI: repo model kamu di Hugging Face, format "username/nama-repo"
+HF_REPO_ID = "yuliseta/coffeeapp"
+ 
+# >>> WAJIB DIISI: nama file model PERSIS seperti di repo HF kamu
+# (bukan checkpoint Eksperimen 4 yang dicurigai data leakage, kecuali
+# sudah dikonfirmasi aman)
+HF_FILENAME = "best_model_phase2.keras"
+ 
+# Kalau repo HF kamu PRIVATE, isi token di Streamlit Cloud lewat menu
+# Settings -> Secrets dengan format:
+#   HF_TOKEN = "hf_xxxxxxxxxxxx"
+# Kalau repo PUBLIC, biarkan ini apa adanya — tidak akan dipakai.
+def _get_hf_token():
+    try:
+        return st.secrets["HF_TOKEN"]
+    except Exception:
+        return None
 
 # >>> VERIFIKASI: urutan HARUS sama dengan train_generator.class_indices
 CLASS_NAMES = ["Cerscospora", "Healthy", "Leaf_rust", "Miner", "Phoma"]
@@ -68,15 +82,27 @@ CLASS_INFO = {
 # ============================================================
 
 @st.cache_resource(show_spinner=False)
-def load_model(model_path: str = MODEL_PATH):
-    """Cache resource — model hanya di-load sekali per proses server,
+def load_model(repo_id: str = HF_REPO_ID, filename: str = HF_FILENAME):
+    """Cache resource — model hanya di-download & di-load sekali per proses
+    server (tersimpan di cache Hugging Face lokal setelah pertama kali),
     dipakai bersama lintas halaman dan lintas sesi."""
     import tensorflow as tf
+    from huggingface_hub import hf_hub_download
+ 
     try:
-        model = tf.keras.models.load_model(model_path, compile=False)
+        local_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+            token=_get_hf_token(),  # None kalau repo public, itu tidak masalah
+        )
+    except Exception as e:
+        return None, f"Gagal download dari Hugging Face ({repo_id}/{filename}): {e}"
+ 
+    try:
+        model = tf.keras.models.load_model(local_path, compile=False)
         return model, None
     except Exception as e:
-        return None, str(e)
+        return None, f"Model berhasil didownload tapi gagal di-load Keras: {e}"
 
 
 def preprocess_image(pil_img: Image.Image, target_size=IMG_SIZE):

@@ -1,12 +1,12 @@
 import streamlit as st
 from PIL import Image
 import io
-from common import load_model, predict, MODEL_PATH
+from common import load_model, predict, HF_REPO_ID, HF_FILENAME
 
 st.markdown("""
 <div class="section-header">
     <span class="section-num">03</span>
-    <span class="section-title">Jalankan Klasifikasi</span>
+    <span class="section-title">Jalankan Prediksi</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -28,12 +28,12 @@ with col2:
         'klasifikasi ConvNeXt Tiny.</p>',
         unsafe_allow_html=True,
     )
-    run = st.button("Jalankan Klasifikasi →")
+    run = st.button("Jalankan Prediksi →")
 
 if run:
     with st.status("Menjalankan klasifikasi...", expanded=True) as status:
-        st.write("🔹 Memuat model...")
-        model, err = load_model(MODEL_PATH)
+        st.write("🔹 Mengunduh & memuat model dari Hugging Face...")
+        model, err = load_model(HF_REPO_ID, HF_FILENAME)
 
         if err is not None:
             status.update(label="Gagal memuat model", state="error", expanded=True)
@@ -46,10 +46,11 @@ if run:
     if err is not None:
         st.markdown(f"""
         <div class="disclaimer error">
-        ✕ Gagal memuat model dari <code>{MODEL_PATH}</code>.<br>
+        ✕ Gagal memuat model.<br>
         Error: {err}<br><br>
-        Pastikan MODEL_PATH di common.py sudah diarahkan ke file model yang
-        benar dan model tersebut tersedia di direktori deploy.
+        Pastikan HF_REPO_ID dan HF_FILENAME di common.py sudah benar, repo
+        Hugging Face bisa diakses, dan (kalau repo private) HF_TOKEN sudah
+        diisi di Streamlit Cloud Secrets.
         </div>
         """, unsafe_allow_html=True)
     else:
